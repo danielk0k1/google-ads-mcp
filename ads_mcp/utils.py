@@ -17,6 +17,7 @@
 """Common utilities used by the MCP server."""
 
 from typing import Any
+import json
 import proto
 import logging
 from google.ads.googleads.client import GoogleAdsClient
@@ -26,6 +27,7 @@ from google.ads.googleads.v23.services.services.google_ads_service import (
 
 from google.ads.googleads.util import get_nested_attr
 import google.auth
+from google.oauth2 import service_account
 from ads_mcp.mcp_header_interceptor import MCPHeaderInterceptor
 import os
 import importlib.resources
@@ -41,7 +43,26 @@ _READ_ONLY_ADS_SCOPE = "https://www.googleapis.com/auth/adwords"
 
 
 def _create_credentials() -> google.auth.credentials.Credentials:
-    """Returns Application Default Credentials with read-only scope."""
+    """Returns credentials based on env var JSON or falls back to ADC."""
+    creds_json_str = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+
+    if creds_json_str:
+        try:
+            creds_info = json.loads(creds_json_str)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON: {e}"
+            )
+        try:
+            credentials = service_account.Credentials.from_service_account_info(
+                creds_info, scopes=[_READ_ONLY_ADS_SCOPE]
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid service account info in JSON payload: {e}"
+            )
+        return credentials
+
     credentials, _ = google.auth.default(scopes=[_READ_ONLY_ADS_SCOPE])
     return credentials
 
