@@ -37,7 +37,8 @@ def run_server() -> None:
     _CLIENT_SECRET = os.environ.get("GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET")
 
     if _CLIENT_ID and _CLIENT_SECRET:
-        mcp.run(transport="streamable-http")
+        port = int(os.environ.get("PORT", "8000"))
+        mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
     else:
         mcp.run()
 
